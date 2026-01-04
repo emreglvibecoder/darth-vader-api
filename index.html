@@ -2,70 +2,88 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Darth Vader Görev Merkezi</title>
+    <title>Darth Vader Kontrol Paneli</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; color: #ffe81f; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        .card { background: #2c2c2c; padding: 20px; border-radius: 15px; box-shadow: 0 0 20px rgba(255, 232, 31, 0.2); width: 100%; max-width: 400px; }
-        h1 { text-shadow: 2px 2px #000; text-align: center; }
-        input { width: 90%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #ffe81f; background: #000; color: #fff; }
-        button { width: 100%; padding: 10px; background: #ffe81f; color: #000; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        button:hover { background: #d4c01a; transform: scale(1.02); }
-        ul { list-style: none; padding: 0; width: 100%; }
-        li { background: #3d3d3d; margin: 5px 0; padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; border-left: 5px solid #ffe81f; }
-        .status { font-size: 0.8em; color: #aaa; }
+        body { font-family: 'Segoe UI', sans-serif; background: #1a1a1a; color: #ffe81f; padding: 20px; display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; }
+        .card { background: #2c2c2c; padding: 20px; border-radius: 15px; width: 350px; box-shadow: 0 0 15px rgba(255, 232, 31, 0.1); }
+        h2 { border-bottom: 2px solid #ffe81f; padding-bottom: 10px; text-align: center; }
+        input { width: 85%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #ffe81f; background: #000; color: #fff; }
+        button { width: 100%; padding: 10px; background: #ffe81f; color: #000; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
+        button:hover { background: #fff; }
+        .result { margin-top: 15px; padding: 10px; background: #000; border-radius: 5px; color: #00ff00; font-size: 0.9em; min-height: 20px; }
+        ul { list-style: none; padding: 0; }
+        li { background: #3d3d3d; margin: 5px 0; padding: 10px; border-radius: 5px; display: flex; justify-content: space-between; }
     </style>
 </head>
 <body>
 
-    <h1>DARTH VADER API</h1>
-
     <div class="card">
-        <h3>Yeni Görev Ekle</h3>
-        <input type="text" id="gorevInput" placeholder="Güç seninle olsun...">
-        <button onclick="gorevEkle()">GÖREVİ AKTİF ET</button>
-        
-        <hr style="border: 0.5px solid #444; margin: 20px 0;">
-        
-        <h3>Mevcut Görevler</h3>
+        <h2>📝 Görevler</h2>
+        <input type="text" id="gorevInput" placeholder="Yeni görev...">
+        <button onclick="gorevEkle()">EKLE</button>
         <ul id="liste"></ul>
     </div>
 
+    <div class="card">
+        <h2>🧠 AI Duygu Analizi</h2>
+        <input type="text" id="aiInput" placeholder="İngilizce bir cümle yaz...">
+        <button onclick="aiAnaliz()">ANALİZ ET</button>
+        <div id="aiSonuc" class="result">Sonuç burada görünecek...</div>
+    </div>
+
+    <div class="card">
+        <h2>💰 Döviz Çevirici</h2>
+        <input type="number" id="paraInput" placeholder="Euro miktarını gir...">
+        <button onclick="dovizHesapla()">TL'YE ÇEVİR</button>
+        <div id="dovizSonuc" class="result">Canlı kur bekleniyor...</div>
+    </div>
+
     <script>
-        // KENDİ RENDER LİNKİNİ BURAYA YAZ
+        // BURAYA KENDİ RENDER LİNKİNİ YAZ (Sonunda / olmasın)
         const API_URL = "https://benim-ilk-apim.onrender.com"; 
 
+        // 1. GÖREVLERİ LİSTELE
         async function listele() {
-            try {
-                // Not: Listeleme şu an token istiyor. Şimdilik manuel ekliyoruz.
-                const yanit = await fetch(`${API_URL}/listele/`, {
-                    headers: { 'Authorization': 'Bearer admin' }
-                });
-                const veriler = await yanit.json();
-                const listeElement = document.getElementById("liste");
-                listeElement.innerHTML = "";
-                veriler.forEach(g => {
-                    listeElement.innerHTML += `<li>${g.baslik} <span class="status">${g.tamamlandi ? '✅' : '⏳'}</span></li>`;
-                });
-            } catch (err) {
-                console.error("Hata:", err);
-            }
+            const yanit = await fetch(`${API_URL}/listele/`, {
+                headers: { 'Authorization': 'Bearer admin' }
+            });
+            const veriler = await yanit.json();
+            const listeElement = document.getElementById("liste");
+            listeElement.innerHTML = "";
+            veriler.forEach(g => {
+                listeElement.innerHTML += `<li>${g.baslik} <span>${g.tamamlandi ? '✅' : '⏳'}</span></li>`;
+            });
         }
 
+        // 2. GÖREV EKLE
         async function gorevEkle() {
             const baslik = document.getElementById("gorevInput").value;
-            if(!baslik) return;
-
             await fetch(`${API_URL}/ekle/`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ baslik: baslik, tamamlandi: false })
             });
-
             document.getElementById("gorevInput").value = "";
             listele();
         }
 
-        // Sayfa açıldığında listeyi yükle
+        // 3. AI ANALİZ
+        async function aiAnaliz() {
+            const metin = document.getElementById("aiInput").value;
+            const yanit = await fetch(`${API_URL}/analiz/${metin}`);
+            const veri = await yanit.json();
+            document.getElementById("aiSonuc").innerText = `Analiz: ${veri.duygu}`;
+        }
+
+        // 4. DÖVİZ HESAPLA
+        async function dovizHesapla() {
+            const miktar = document.getElementById("paraInput").value;
+            const yanit = await fetch(`${API_URL}/doviz-hesapla/${miktar}`);
+            const veri = await yanit.json();
+            document.getElementById("dovizSonuc").innerText = `${miktar} EUR = ${veri.toplam_tl} TL`;
+        }
+
+        // Sayfa açıldığında görevleri getir
         listele();
     </script>
 </body>
