@@ -39,8 +39,18 @@ class TodoDB(Base):
 Base.metadata.create_all(bind=engine)
 
 # 3. API NESNESİ VE CORS
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI()
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+# BU BLOK TAM OLARAK ŞÖYLE OLMALI:
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Herkese izin ver
+    allow_credentials=True,
+    allow_methods=["*"],  # GET, POST, OPTIONS vb. her şeye izin ver
+    allow_headers=["*"],  # Tüm header'lara (Authorization dahil) izin ver
+)
 
 # 4. YARDIMCI FONKSİYONLAR
 def get_db():
