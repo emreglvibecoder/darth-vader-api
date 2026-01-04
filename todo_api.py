@@ -1,113 +1,97 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from sqlalchemy import create_engine, Column, Integer, String, Boolean
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import sessionmaker, Session, relationship
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List
+from passlib.context import CryptContext
+from fastapi.middleware.cors import CORSMiddleware
 import requests
 from textblob import TextBlob
-from passlib.context import CryptContext
 
-# 1. GÜVENLİK VE ŞİFRELEME AYARLARI
-SECRET_KEY = "darth-vader-gizli-anahtar" # Bu anahtar token üretmek için kullanılır
-ALGORITHM = "HS256"
+# 1. AYARLAR VE GÜVENLİK
+DATABASE_URL = "sqlite:///./yapilacaklar.db"
+SECRET_KEY = "vader-secret-key"
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-# 2. VERİTABANI AYARLARI
-DATABASE_URL = "sqlite:///./yapilacaklar.db"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
+# 2. VERİTABANI MODELLERİ
+class UserDB(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True)
+    hashed_password = Column(String)
+    todos = relationship("TodoDB", back_populates="owner")
 
 class TodoDB(Base):
     __tablename__ = "todos"
     id = Column(Integer, primary_key=True, index=True)
     baslik = Column(String)
     tamamlandi = Column(Boolean, default=False)
+    owner_id = Column(Integer, ForeignKey("users.id"))
+    owner = relationship("UserDB", back_populates="todos")
 
 Base.metadata.create_all(bind=engine)
 
-# 3. API NESNESİ VE MODELLER
+# 3. API NESNESİ VE CORS
 app = FastAPI()
-from fastapi.middleware.cors import CORSMiddleware
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-app = FastAPI()
-from fastapi.middleware.cors import CORSMiddleware
-
-app = FastAPI()
-
-# --- BURAYI EKLE ---
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"], # Tüm internet sitelerinden gelen isteklere izin ver
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-# -------------------
-
-class TodoSema(BaseModel):
-    baslik: str
-    tamamlandi: bool = False
-
+# 4. YARDIMCI FONKSİYONLAR
 def get_db():
     db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    try: yield db
+    finally: db.close()
 
-# 4. GÜVENLİK FONKSİYONLARI (KAPICI)
-def kullanici_dogrula(token: str = Depends(oauth2_scheme)):
-    # Şimdilik basit tutuyoruz: Eğer token 'admin' ise geçiş ver
-    if token != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Geçersiz anahtar (Token)",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    return token
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    user = db.query(UserDB).filter(UserDB.username == token).first() # Basitleştirilmiş token
+    if not user:
+        raise HTTPException(status_code=401, detail="Geçersiz oturum")
+    return user
 
-# --- ENDPOİNTLER ---
+# 5. ENDPOINTLER (KAYIT VE GİRİŞ)
+@app.post("/register")
+def register(username: str, sifre: str, db: Session = Depends(get_db)):
+    if db.query(UserDB).filter(UserDB.username == username).first():
+        raise HTTPException(status_code=400, detail="Bu kullanıcı adı alınmış")
+    yeni_user = UserDB(username=username, hashed_password=pwd_context.hash(sifre))
+    db.add(yeni_user)
+    db.commit()
+    return {"mesaj": "Kayıt başarılı, karanlık tarafa hoş geldin."}
 
-# Giriş yapma ve Token alma noktası
 @app.post("/token")
-def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    # Kullanıcı adı: admin, Şifre: 12345
-    if form_data.username == "admin" and form_data.password == "12345":
-        return {"access_token": "admin", "token_type": "bearer"}
-    raise HTTPException(status_code=400, detail="Hatalı kullanıcı adı veya şifre")
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    user = db.query(UserDB).filter(UserDB.username == form_data.username).first()
+    if not user or not pwd_context.verify(form_data.password, user.hashed_password):
+        raise HTTPException(status_code=400, detail="Hatalı giriş")
+    return {"access_token": user.username, "token_type": "bearer"}
 
-@app.get("/")
-def ana_sayfa():
-    return {"mesaj": "Güvenli API'ye Hoş Geldin!"}
-
-# BU KISIM ARTIK KORUMALI (Depends(kullanici_dogrula) eklendi)
+# 6. GÖREV ENDPOINTLERİ (KULLANICIYA ÖZEL)
 @app.get("/listele/")
-def gorevleri_getir(token: str = Depends(kullanici_dogrula), db: Session = Depends(get_db)):
-    return db.query(TodoDB).all()
+def listele(user: UserDB = Depends(get_current_user), db: Session = Depends(get_db)):
+    return user.todos
 
 @app.post("/ekle/")
-def gorev_ekle(item: TodoSema, db: Session = Depends(get_db)):
-    yeni_gorev = TodoDB(baslik=item.baslik, tamamlandi=item.tamamlandi)
-    db.add(yeni_gorev)
+def ekle(baslik: str, user: UserDB = Depends(get_current_user), db: Session = Depends(get_db)):
+    yeni = TodoDB(baslik=baslik, owner_id=user.id)
+    db.add(yeni)
     db.commit()
-    db.refresh(yeni_gorev)
-    return {"mesaj": "Görev eklendi!", "id": yeni_gorev.id}
+    return {"durum": "başarılı"}
 
+# ... (AI ve Döviz endpointleri aynı kalabilir) ...
 @app.get("/analiz/{cumle}")
-def duygu_analizi(cumle: str):
+def analiz(cumle: str):
     puan = TextBlob(cumle).sentiment.polarity
-    durum = "Pozitif 😊" if puan > 0 else "Negatif 😔" if puan < 0 else "Nötr 😐"
-    return {"metin": cumle, "duygu": durum}
+    return {"duygu": "Pozitif 😊" if puan > 0 else "Negatif 😔" if puan < 0 else "Nötr 😐"}
 
 @app.get("/doviz-hesapla/{miktar}")
-def doviz_getir(miktar: float):
-    url = "https://api.frankfurter.app/latest?from=EUR&to=TRY"
-    try:
-        kur = requests.get(url).json()["rates"]["TRY"]
-        return {"miktar_eur": miktar, "toplam_tl": round(miktar * kur, 2)}
-    except:
-        return {"hata": "Kur verisi alınamadı."}
+def doviz(miktar: float):
+    kur = requests.get("https://api.frankfurter.app/latest?from=EUR&to=TRY").json()["rates"]["TRY"]
+    return {"toplam_tl": round(miktar * kur, 2)}
+
+

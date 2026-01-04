@@ -2,112 +2,107 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Vader'ın Kumanda Merkezi</title>
+    <title>Vader's Command Center 2.0</title>
     <link href="https://fonts.googleapis.com/css2?family=Poller+One&display=swap" rel="stylesheet">
     <style>
-        body { 
-            background-color: #000; 
-            background-image: url('https://www.transparenttextures.com/patterns/stardust.png'); /* Yıldız arka planı */
-            color: #ffe81f; 
-            font-family: 'Poller One', cursive; 
-            display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; padding: 40px;
-        }
-        .card { 
-            background: rgba(20, 20, 20, 0.9); 
-            padding: 25px; border-radius: 5px; width: 350px; 
-            border: 2px solid #ffe81f;
-            box-shadow: 0 0 20px #ffe81f; /* Işın kılıcı parlaması */
-            transition: 0.4s;
-        }
-        .card:hover { transform: scale(1.03); box-shadow: 0 0 30px #f00; border-color: #f00; } /* Kırmızı tarafına geçiş */
-        h2 { text-align: center; text-transform: uppercase; letter-spacing: 2px; color: #ffe81f; }
-        input { 
-            width: 88%; padding: 12px; margin: 10px 0; border-radius: 0; 
-            border: 1px solid #ffe81f; background: #111; color: #fff; 
-        }
-        button { 
-            width: 100%; padding: 12px; background: #ffe81f; color: #000; 
-            border: none; font-weight: bold; cursor: pointer; text-transform: uppercase;
-        }
-        button:hover { background: #fff; box-shadow: 0 0 15px #fff; }
-        .result { margin-top: 15px; padding: 10px; border-left: 4px solid #f00; background: #111; color: #0f0; font-family: monospace; }
-        ul { list-style: none; padding: 0; }
-        li { background: #222; margin: 8px 0; padding: 12px; border-left: 4px solid #ffe81f; display: flex; justify-content: space-between; }
-        .vader-img { width: 100px; display: block; margin: 0 auto 20px; filter: drop-shadow(0 0 10px #f00); }
+        body { background: #000; color: #ffe81f; font-family: 'Poller One', cursive; text-align: center; padding: 20px; }
+        .card { background: rgba(20, 20, 20, 0.9); padding: 20px; border: 2px solid #ffe81f; box-shadow: 0 0 15px #ffe81f; margin: 10px auto; max-width: 400px; }
+        input { width: 80%; padding: 10px; margin: 5px; background: #111; border: 1px solid #ffe81f; color: white; }
+        button { padding: 10px 20px; background: #ffe81f; border: none; cursor: pointer; font-weight: bold; margin: 5px; }
+        button:hover { background: white; box-shadow: 0 0 10px white; }
+        #app-area { display: none; } /* Giriş yapmadan görünmez */
+        li { background: #222; margin: 5px; padding: 10px; border-left: 5px solid #f00; display: flex; justify-content: space-between; transition: 0.3s; }
+        li:hover { border-left-width: 20px; } /* Işın kılıcı uzama efekti */
     </style>
 </head>
 <body>
 
-    <div style="position: fixed; top: 10px; right: 10px; z-index: 100;">
-        <audio id="vaderMusic" loop>
-            <source src="https://www.soundboard.com/handler/DownLoadTrack.ashx?cliptoken=eb9ca1d7-2f3b-4861-9c63-47021d15c7f8" type="audio/mpeg">
-        </audio>
-        <button onclick="document.getElementById('vaderMusic').play()" style="width: auto; padding: 5px 10px;">🔊 MÜZİĞİ AÇ</button>
+    <audio id="sndSaberOn" src="https://www.soundboard.com/handler/DownLoadTrack.ashx?cliptoken=5d85d77a-6242-45e0-8c90-9f5b6b3e896a"></audio>
+    <audio id="sndSaberSwing" src="https://www.soundboard.com/handler/DownLoadTrack.ashx?cliptoken=f98897c8-2b87-43f1-b1e7-814d9526e0e0"></audio>
+
+    <div id="auth-area" class="card">
+        <h2>GİRİŞ YAP</h2>
+        <input type="text" id="user" placeholder="Kullanıcı Adı">
+        <input type="password" id="pass" placeholder="Şifre">
+        <button onclick="login()">GİRİŞ</button>
+        <button onclick="register()" style="background: #444; color: white;">KAYIT OL</button>
     </div>
 
-    <img src="https://upload.wikimedia.org/wikipedia/en/7/76/Darth_Vader.png" class="vader-img" alt="Vader">
-
-    <div class="card">
-        <h2>📜 Emirler</h2>
-        <input type="text" id="gorevInput" placeholder="Bir emir giriniz...">
-        <button onclick="gorevEkle()">GÜÇÜ KULLAN</button>
-        <ul id="liste"></ul>
-    </div>
-
-    <div class="card">
-        <h2>🧠 Karanlık Zihin</h2>
-        <input type="text" id="aiInput" placeholder="Düşüncelerini yaz (İngilizce)...">
-        <button onclick="aiAnaliz()">ZİHİN OKU</button>
-        <div id="aiSonuc" class="result">Duygu bekleniyor...</div>
-    </div>
-
-    <div class="card">
-        <h2>💳 Galaktik Kredi</h2>
-        <input type="number" id="paraInput" placeholder="Euro miktarını gir...">
-        <button onclick="dovizHesapla()">KREDİYE ÇEVİR</button>
-        <div id="dovizSonuc" class="result">Kur bekleniyor...</div>
+    <div id="app-area">
+        <h1 id="welcome-msg"></h1>
+        <div class="card">
+            <h3>Emirler</h3>
+            <input type="text" id="gorevInput" placeholder="Emir ver...">
+            <button onclick="gorevEkle()">GÖNDER</button>
+            <ul id="liste"></ul>
+        </div>
+        <button onclick="logout()" style="background: red; color: white;">SİSTEMDEN ÇIK</button>
     </div>
 
     <script>
-        // ÖNEMLİ: KENDİ RENDER LİNKİNİ BURAYA YAZ!
-        const API_URL = "https://benim-ilk-apim.onrender.com"; 
+        const API_URL = "https://benim-ilk-apim.onrender.com"; // BURAYI DEĞİŞTİR
+        let TOKEN = localStorage.getItem("vader_token");
+
+        function playSound(id) { document.getElementById(id).play(); }
+
+        async function register() {
+            const u = document.getElementById("user").value;
+            const p = document.getElementById("pass").value;
+            await fetch(`${API_URL}/register?username=${u}&sifre=${p}`, { method: 'POST' });
+            alert("Kayıt başarılı! Şimdi giriş yap.");
+        }
+
+        async function login() {
+            const u = document.getElementById("user").value;
+            const p = document.getElementById("pass").value;
+            const formData = new FormData();
+            formData.append("username", u);
+            formData.append("password", p);
+
+            const res = await fetch(`${API_URL}/token`, { method: 'POST', body: formData });
+            if(res.ok) {
+                const data = await res.json();
+                TOKEN = data.access_token;
+                localStorage.setItem("vader_token", TOKEN);
+                playSound("sndSaberOn");
+                baslat();
+            } else { alert("Hatalı giriş!"); }
+        }
+
+        function baslat() {
+            document.getElementById("auth-area").style.display = "none";
+            document.getElementById("app-area").style.display = "block";
+            document.getElementById("welcome-msg").innerText = `Hoş geldin Lord ${localStorage.getItem("vader_user") || 'Vader'}`;
+            listele();
+        }
 
         async function listele() {
-            const yanit = await fetch(`${API_URL}/listele/`, { headers: { 'Authorization': 'Bearer admin' } });
-            const veriler = await yanit.json();
-            const liste = document.getElementById("liste");
-            liste.innerHTML = "";
-            veriler.forEach(g => {
-                liste.innerHTML += `<li>${g.baslik} <span>${g.tamamlandi ? '🌑' : '☀️'}</span></li>`;
-            });
+            const res = await fetch(`${API_URL}/listele/`, { headers: { 'Authorization': `Bearer ${TOKEN}` } });
+            const veriler = await res.json();
+            const l = document.getElementById("liste");
+            l.innerHTML = "";
+            veriler.forEach(g => l.innerHTML += `<li>${g.baslik}</li>`);
         }
 
         async function gorevEkle() {
-            const baslik = document.getElementById("gorevInput").value;
-            await fetch(`${API_URL}/ekle/`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ baslik: baslik, tamamlandi: false })
+            const b = document.getElementById("gorevInput").value;
+            await fetch(`${API_URL}/ekle/?baslik=${b}`, { 
+                method: 'POST', 
+                headers: { 'Authorization': `Bearer ${TOKEN}` } 
             });
+            playSound("sndSaberSwing");
             document.getElementById("gorevInput").value = "";
             listele();
         }
 
-        async function aiAnaliz() {
-            const metin = document.getElementById("aiInput").value;
-            const yanit = await fetch(`${API_URL}/analiz/${metin}`);
-            const veri = await yanit.json();
-            document.getElementById("aiSonuc").innerText = `Karanlık Tarafın Sezisi: ${veri.duygu}`;
+        function logout() {
+            localStorage.clear();
+            location.reload();
         }
 
-        async function dovizHesapla() {
-            const miktar = document.getElementById("paraInput").value;
-            const yanit = await fetch(`${API_URL}/doviz-hesapla/${miktar}`);
-            const veri = await yanit.json();
-            document.getElementById("dovizSonuc").innerText = `${miktar} EUR = ${veri.toplam_tl} Galaktik TL`;
-        }
-
-        listele();
+        if(TOKEN) baslat(); // Zaten giriş yapılmışsa direkt aç
     </script>
 </body>
 </html>
+
+
