@@ -13,7 +13,7 @@ from textblob import TextBlob
 # 1. AYARLAR VE GÜVENLİK
 DATABASE_URL = "sqlite:///./yapilacaklar.db"
 SECRET_KEY = "vader-secret-key"
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__ident="2b")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
