@@ -31,6 +31,22 @@ Base.metadata.create_all(bind=engine)
 
 # 3. API NESNESİ VE MODELLER
 app = FastAPI()
+from fastapi.middleware.cors import CORSMiddleware
+
+app = FastAPI()
+from fastapi.middleware.cors import CORSMiddleware
+
+app = FastAPI()
+
+# --- BURAYI EKLE ---
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # Tüm internet sitelerinden gelen isteklere izin ver
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+# -------------------
 
 class TodoSema(BaseModel):
     baslik: str
