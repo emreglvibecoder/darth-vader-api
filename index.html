@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Darth Vader Görev Merkezi</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; color: #ffe81f; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .card { background: #2c2c2c; padding: 20px; border-radius: 15px; box-shadow: 0 0 20px rgba(255, 232, 31, 0.2); width: 100%; max-width: 400px; }
+        h1 { text-shadow: 2px 2px #000; text-align: center; }
+        input { width: 90%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #ffe81f; background: #000; color: #fff; }
+        button { width: 100%; padding: 10px; background: #ffe81f; color: #000; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button:hover { background: #d4c01a; transform: scale(1.02); }
+        ul { list-style: none; padding: 0; width: 100%; }
+        li { background: #3d3d3d; margin: 5px 0; padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; border-left: 5px solid #ffe81f; }
+        .status { font-size: 0.8em; color: #aaa; }
+    </style>
+</head>
+<body>
+
+    <h1>DARTH VADER API</h1>
+
+    <div class="card">
+        <h3>Yeni Görev Ekle</h3>
+        <input type="text" id="gorevInput" placeholder="Güç seninle olsun...">
+        <button onclick="gorevEkle()">GÖREVİ AKTİF ET</button>
+        
+        <hr style="border: 0.5px solid #444; margin: 20px 0;">
+        
+        <h3>Mevcut Görevler</h3>
+        <ul id="liste"></ul>
+    </div>
+
+    <script>
+        // KENDİ RENDER LİNKİNİ BURAYA YAZ
+        const API_URL = "https://benim-ilk-apim.onrender.com"; 
+
+        async function listele() {
+            try {
+                // Not: Listeleme şu an token istiyor. Şimdilik manuel ekliyoruz.
+                const yanit = await fetch(`${API_URL}/listele/`, {
+                    headers: { 'Authorization': 'Bearer admin' }
+                });
+                const veriler = await yanit.json();
+                const listeElement = document.getElementById("liste");
+                listeElement.innerHTML = "";
+                veriler.forEach(g => {
+                    listeElement.innerHTML += `<li>${g.baslik} <span class="status">${g.tamamlandi ? '✅' : '⏳'}</span></li>`;
+                });
+            } catch (err) {
+                console.error("Hata:", err);
+            }
+        }
+
+        async function gorevEkle() {
+            const baslik = document.getElementById("gorevInput").value;
+            if(!baslik) return;
+
+            await fetch(`${API_URL}/ekle/`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ baslik: baslik, tamamlandi: false })
+            });
+
+            document.getElementById("gorevInput").value = "";
+            listele();
+        }
+
+        // Sayfa açıldığında listeyi yükle
+        listele();
+    </script>
+</body>
+</html>
